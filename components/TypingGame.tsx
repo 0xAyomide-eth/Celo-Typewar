@@ -175,22 +175,39 @@ export default function TypingGame() {
           </span>
         );
       } else if (isCurrent) {
-        const isError = currentInput.length > 0 && !word.startsWith(currentInput);
+        const letters = [];
+        const length = Math.max(word.length, currentInput.length);
         
-        if (isError) {
-          return (
-            <span key={actualIndex} className="text-[#FF4B4B] underline decoration-wavy mr-[1ch]">
-              {word}
-            </span>
-          );
-        } else {
-          return (
-            <span key={actualIndex} className="text-celo-green border-b-[3px] border-celo-green mr-[1ch]">
-              {word}
-              <span className="inline-block w-[2px] h-[32px] bg-celo-green align-middle ml-[-2px] animate-pulse"></span>
-            </span>
-          );
+        for (let idx = 0; idx <= length; idx++) {
+          if (idx === currentInput.length) {
+            letters.push(
+              <span key={`cursor-${idx}`} className="inline-block w-[2px] h-[32px] bg-celo-green align-middle mx-[-1px] animate-pulse"></span>
+            );
+          }
+
+          if (idx < length) {
+            const expectedChar = word[idx] || '';
+            const inputChar = currentInput[idx];
+            let colorClass = "text-muted";
+            
+            if (inputChar !== undefined) {
+              if (inputChar === expectedChar) {
+                colorClass = "text-celo-green";
+              } else {
+                colorClass = "text-[#FF4B4B]";
+              }
+            }
+            
+            const displayChar = expectedChar || inputChar;
+            letters.push(<span key={idx} className={colorClass}>{displayChar}</span>);
+          }
         }
+
+        return (
+          <span key={actualIndex} className="border-b-[3px] border-celo-green mr-[1ch]">
+            {letters}
+          </span>
+        );
       } else {
         return (
           <span key={actualIndex} className="mr-[1ch]">
@@ -243,12 +260,6 @@ export default function TypingGame() {
             <div className="text-[11px] uppercase tracking-[0.1em] text-muted mb-1">TIME</div>
             <div className="text-5xl font-extrabold leading-none tracking-tight">
               {timeLeft}s
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <div className="text-[11px] uppercase tracking-[0.1em] text-muted mb-1">REWARD</div>
-            <div className="text-5xl font-extrabold leading-none tracking-tight">
-              0.00 <span className="text-xl font-normal">cUSD</span>
             </div>
           </div>
         </div>
