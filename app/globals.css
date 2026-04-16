@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-celo-gold: #FBCC5C;
+  --color-celo-green: #35D07F;
+  --color-ink: #101213;
+  --color-paper: #FFFFFF;
+  --color-muted: #636669;
+  --font-sans: 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

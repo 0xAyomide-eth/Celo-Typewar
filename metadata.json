@@ -1,0 +1,5 @@
+{
+  "name": "CeloType",
+  "description": "A typing game on the Celo blockchain, compatible with MiniPay.",
+  "requestFramePermissions": []
+}
