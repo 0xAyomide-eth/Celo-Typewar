@@ -8,47 +8,71 @@ export function useMiniPay() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
+    if (typeof window !== 'undefined') {
       const ethProvider = (window as any).ethereum;
-      if (ethProvider.isMiniPay) {
-        setIsMiniPay(true);
+      if (ethProvider) {
+        if (ethProvider.isMiniPay) {
+          setIsMiniPay(true);
+        }
+        
+        // Auto-check if already connected via injected wallet
+        const checkInjectedConnection = async () => {
+          try {
+            const browserProvider = new BrowserProvider(ethProvider);
+            const accounts = await browserProvider.listAccounts();
+            if (accounts.length > 0) {
+              setProvider(browserProvider);
+              setAddress(accounts[0].address);
+              setIsConnected(true);
+            }
+          } catch(e) {}
+        };
+        checkInjectedConnection();
+
+        ethProvider.on('accountsChanged', (accounts: string[]) => {
+          if (accounts.length > 0) {
+            setAddress(accounts[0]);
+            setIsConnected(true);
+            setProvider(new BrowserProvider(ethProvider));
+          } else {
+            setAddress(null);
+            setIsConnected(false);
+          }
+        });
       }
-      
-      const browserProvider = new BrowserProvider(ethProvider);
-      setProvider(browserProvider);
-
-      // Check if already connected
-      browserProvider.listAccounts().then((accounts) => {
-        if (accounts.length > 0) {
-          setAddress(accounts[0].address);
-          setIsConnected(true);
-        }
-      });
-
-      // Listen for account changes
-      ethProvider.on('accountsChanged', (accounts: string[]) => {
-        if (accounts.length > 0) {
-          setAddress(accounts[0]);
-          setIsConnected(true);
-        } else {
-          setAddress(null);
-          setIsConnected(false);
-        }
-      });
     }
   }, []);
 
   const connect = async () => {
-    if (!provider) {
-      // If no provider, maybe they are not in a web3 browser
-      alert("No Ethereum provider found. Please install a wallet or use MiniPay.");
+    const ethProvider = (window as any).ethereum;
+    if (!ethProvider) {
+      alert("No web3 wallet found. Please install MetaMask, or open this site in Opera Mini to use MiniPay.");
       return;
     }
+    
     try {
-      const accounts = await provider.send("eth_requestAccounts", []);
+      const browserProvider = new BrowserProvider(ethProvider);
+      const accounts = await browserProvider.send("eth_requestAccounts", []);
       if (accounts.length > 0) {
+        setProvider(browserProvider);
         setAddress(accounts[0]);
         setIsConnected(true);
+
+        // Attempt to switch to Celo Mainnet automatically
+        try {
+          await browserProvider.send("wallet_switchEthereumChain", [{ chainId: "0xa4ec" }]);
+        } catch (switchError: any) {
+          // This error code indicates that the chain has not been added to the wallet.
+          if (switchError.code === 4902) {
+            await browserProvider.send("wallet_addEthereumChain", [{
+              chainId: "0xa4ec",
+              chainName: "Celo Mainnet",
+              nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
+              rpcUrls: ["https://forno.celo.org"],
+              blockExplorerUrls: ["https://celoscan.io/"]
+            }]);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to connect", error);
