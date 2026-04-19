@@ -1,17 +1,91 @@
 @import "tailwindcss";
 
 @theme {
-  --color-celo-gold: #FBCC5C;
-  --color-celo-green: #35D07F;
-  --color-ink: #101213;
-  --color-paper: #FFFFFF;
-  --color-muted: #636669;
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-error: var(--error);
   --font-sans: 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Courier New', Courier, monospace;
 }
 
-body {
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
+:root {
+  /* Theme 1: Light (Celo Default) */
+  --primary: #35D07F;
+  --secondary: #FBCC5C;
+  --ink: #101213;
+  --paper: #FFFFFF;
+  --muted: #636669;
+  --surface: #F4F5F6;
+  --error: #FF4B4B;
 }
+
+.theme-dark {
+  /* Theme 2: Dark Mode */
+  --primary: #35D07F;
+  --secondary: #FBCC5C;
+  --ink: #E0E0E0;
+  --paper: #121212;
+  --muted: #888888;
+  --surface: #1E1E1E;
+  --error: #FF6B6B;
+}
+
+.theme-ocean {
+  /* Theme 3: Ocean (Deep Blue) */
+  --primary: #38BDF8;
+  --secondary: #818CF8;
+  --ink: #F8FAFC;
+  --paper: #0F172A;
+  --muted: #64748B;
+  --surface: #1E293B;
+  --error: #F87171;
+}
+
+.theme-terminal {
+  /* Theme 4: Terminal (Retro Hacker) */
+  --primary: #22C55E;
+  --secondary: #16A34A;
+  --ink: #4ADE80;
+  --paper: #000000;
+  --muted: #14532D;
+  --surface: #052E16;
+  --error: #DC2626;
+}
+
+.theme-sunset {
+  /* Theme 5: Sunset (Warm) */
+  --primary: #F97316;
+  --secondary: #FBBF24;
+  --ink: #431407;
+  --paper: #FFF7ED;
+  --muted: #9A3412;
+  --surface: #FFEDD5;
+  --error: #EF4444;
+}
+
+.theme-cyberpunk {
+  /* Theme 6: Cyberpunk (Neon) */
+  --primary: #F0ABFC;
+  --secondary: #2DD4BF;
+  --ink: #E879F9;
+  --paper: #2E1065;
+  --muted: #6D28D9;
+  --surface: #4C1D95;
+  --error: #FB7185;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+* {
+  border-color: var(--muted);
+}
+

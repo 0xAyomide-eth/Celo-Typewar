@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMiniPay } from '@/hooks/use-minipay';
 import { Contract } from 'ethers';
 import confetti from 'canvas-confetti';
+import { Loader2, RefreshCw, Trophy, Wallet, Palette } from 'lucide-react';
 
 const WORDS = [
   "the", "be", "of", "and", "a", "to", "in", "he", "have", "it", "that", "for", "they", "I", "with", "as", "not", "on", "she", "at", "by", "this", "we", "you", "do", "but", "from", "or", "which", "one", "would", "all", "will", "there", "say", "who", "make", "when", "can", "more", "if", "no", "man", "out", "other", "so", "what", "time", "up", "go", "about", "than", "into", "could", "state", "only", "new", "year", "some", "take", "come", "these", "know", "see", "use", "get", "like", "then", "first", "any", "work", "now", "may", "such", "give", "over", "think", "most", "even", "find", "day", "also", "after", "way", "many", "must", "look", "before", "great", "back", "through", "long", "where", "much", "should", "well", "people", "down", "own", "just", "because", "good", "each", "those", "feel", "seem", "how", "high", "too", "place", "little", "world", "very", "still", "nation", "hand", "old", "life", "tell", "write", "become", "here", "show", "house", "both", "between", "need", "mean", "call", "develop", "under", "last", "right", "move", "thing", "general", "school", "never", "same", "another", "begin", "while", "number", "part", "turn", "real", "leave", "might", "want", "point", "form", "off", "child", "few", "small", "since", "against", "ask", "late", "home", "interest", "large", "person", "end", "open", "public", "follow", "during", "present", "without", "again", "hold", "govern", "around", "possible", "head", "consider", "word", "program", "problem", "however", "lead", "system", "set", "order", "eye", "plan", "run", "keep", "face", "fact", "group", "play", "stand", "increase", "early", "course", "change", "help", "line"
@@ -32,6 +33,7 @@ export default function TypingGame() {
   const [accuracy, setAccuracy] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bestScore, setBestScore] = useState<number | null>(null);
+  const [theme, setTheme] = useState('light');
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,8 +51,21 @@ export default function TypingGame() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+    
+    // Load saved theme
+    const savedTheme = localStorage.getItem('celotype-theme') || 'light';
+    setTheme(savedTheme);
+    document.documentElement.className = savedTheme === 'light' ? '' : `theme-${savedTheme}`;
+    
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newTheme = e.target.value;
+    setTheme(newTheme);
+    localStorage.setItem('celotype-theme', newTheme);
+    document.documentElement.className = newTheme === 'light' ? '' : `theme-${newTheme}`;
+  };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -181,7 +196,7 @@ export default function TypingGame() {
         for (let idx = 0; idx <= length; idx++) {
           if (idx === currentInput.length) {
             letters.push(
-              <span key={`cursor-${idx}`} className="inline-block w-[2px] h-[32px] bg-celo-green align-middle mx-[-1px] animate-pulse"></span>
+              <span key={`cursor-${idx}`} className="inline-block w-[2px] h-[32px] bg-primary align-middle mx-[-1px] animate-pulse"></span>
             );
           }
 
@@ -192,9 +207,9 @@ export default function TypingGame() {
             
             if (inputChar !== undefined) {
               if (inputChar === expectedChar) {
-                colorClass = "text-celo-green";
+                colorClass = "text-primary";
               } else {
-                colorClass = "text-[#FF4B4B]";
+                colorClass = "text-error";
               }
             }
             
@@ -204,7 +219,7 @@ export default function TypingGame() {
         }
 
         return (
-          <span key={actualIndex} className="border-b-[3px] border-celo-green mr-[1ch]">
+          <span key={actualIndex} className="border-b-[3px] border-primary mr-[1ch]">
             {letters}
           </span>
         );
@@ -225,28 +240,45 @@ export default function TypingGame() {
     <div className="flex flex-col h-full w-full max-w-[1024px] mx-auto">
       <header className="px-12 py-8 flex justify-between items-center">
         <div className="flex items-center gap-3 font-bold text-2xl tracking-tight">
-          <div className="w-6 h-6 bg-celo-gold rounded-full border-4 border-celo-green"></div>
+          <div className="w-6 h-6 bg-secondary rounded-full border-4 border-primary"></div>
           CELO TYPER
         </div>
-        {!isConnected ? (
-          <button 
-            onClick={connect}
-            className="bg-[#F4F5F6] px-4 py-2 rounded-full flex items-center gap-2 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-          >
-            <span className="text-muted">●</span> {isMiniPay ? "Connect MiniPay" : "Connect Wallet"}
-          </button>
-        ) : (
-          <div className="bg-[#F4F5F6] px-4 py-2 rounded-full flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-            <span className="text-celo-green">●</span> Connected to {isMiniPay ? "MiniPay" : "Wallet"} • {address?.slice(0, 4)}...{address?.slice(-4)}
+        <div className="flex flex-row items-center gap-4">
+          <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-full border border-muted/20">
+            <Palette size={14} className="text-muted" />
+            <select 
+              value={theme}
+              onChange={handleThemeChange}
+              className="bg-transparent text-xs font-semibold uppercase tracking-wider text-ink outline-none cursor-pointer border-none"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="ocean">Ocean</option>
+              <option value="terminal">Terminal</option>
+              <option value="sunset">Sunset</option>
+              <option value="cyberpunk">Cyber</option>
+            </select>
           </div>
-        )}
+          {!isConnected ? (
+            <button 
+              onClick={connect}
+              className="bg-surface px-4 py-2 rounded-full flex items-center gap-2 text-xs font-semibold uppercase tracking-wider cursor-pointer transition-colors hover:brightness-95 hover:dark:brightness-110"
+            >
+              <span className="text-muted">●</span> {isMiniPay ? "Connect MiniPay" : "Connect Wallet"}
+            </button>
+          ) : (
+            <div className="bg-surface px-4 py-2 rounded-full flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
+              <span className="text-primary">●</span> Connected to {isMiniPay ? "MiniPay" : "Wallet"} • {address?.slice(0, 4)}...{address?.slice(-4)}
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="flex-1 px-12 flex flex-col justify-center gap-16">
         <div className="flex gap-12">
           <div className="flex flex-col">
             <div className="text-[11px] uppercase tracking-[0.1em] text-muted mb-1">WPM</div>
-            <div className={`text-5xl font-extrabold leading-none tracking-tight ${status === 'playing' ? 'text-celo-green' : ''}`}>
+            <div className={`text-5xl font-extrabold leading-none tracking-tight ${status === 'playing' ? 'text-primary' : ''}`}>
               {currentWpm || 0}
             </div>
           </div>
@@ -291,7 +323,7 @@ export default function TypingGame() {
         <div className="flex gap-4">
           <div className="text-right">
             <div className="mt-3 text-xs font-medium text-muted">
-              {bestScore !== null ? `Best Score: ${bestScore} WPM` : "Wallet Balance: 0.00 cUSD"}
+              {bestScore !== null ? `Best Score: ${bestScore} WPM` : ""}
             </div>
             <div className="mt-2 flex gap-4">
               <button 
@@ -303,7 +335,7 @@ export default function TypingGame() {
               <button 
                 onClick={submitScore}
                 disabled={isSubmitting || !isConnected || status !== 'finished'}
-                className="px-7 py-3.5 rounded-xl font-bold text-sm cursor-pointer border-none bg-celo-green text-white transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-7 py-3.5 rounded-xl font-bold text-sm cursor-pointer border border-primary bg-primary text-paper transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Submitting..." : "Save to Celo"}
               </button>
