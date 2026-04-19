@@ -15,8 +15,10 @@ const GAME_DURATION = 30; // seconds
 // Mock contract address for UI purposes if not deployed
 const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
 const CONTRACT_ABI = [
-  "function submitScore(uint256 _wpm, uint256 _accuracy) public",
-  "function bestWpm(address) public view returns (uint256)"
+  "function submitScore(uint256 _wpm, uint256 _accuracy) public payable",
+  "function bestWpm(address) public view returns (uint256)",
+  "function userPoints(address) public view returns (uint256)",
+  "function submitFee() public view returns (uint256)"
 ];
 
 export default function TypingGame() {
@@ -33,7 +35,10 @@ export default function TypingGame() {
   const [accuracy, setAccuracy] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bestScore, setBestScore] = useState<number | null>(null);
+  const [userPoints, setUserPoints] = useState<number>(0);
+  const [submitFee, setSubmitFee] = useState<string>("0.01");
   const [theme, setTheme] = useState('light');
+  const [isFocused, setIsFocused] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -81,18 +86,25 @@ export default function TypingGame() {
 
   useEffect(() => {
     if (isConnected && provider && address) {
-      fetchBestScore();
+      fetchUserData();
     }
   }, [isConnected, provider, address]);
 
-  const fetchBestScore = async () => {
+  const fetchUserData = async () => {
     if (!provider || !address || CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") return;
     try {
       const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+      
       const best = await contract.bestWpm(address);
-      setBestScore(Number(best));
+      if (Number(best) > 0) setBestScore(Number(best));
+
+      const points = await contract.userPoints(address);
+      setUserPoints(Number(points));
+
+      const fee = await contract.submitFee();
+      setSubmitFee((Number(fee) / 1e18).toString());
     } catch (e) {
-      console.error("Failed to fetch best score", e);
+      console.error("Failed to fetch user data", e);
     }
   };
 
@@ -162,13 +174,17 @@ export default function TypingGame() {
     try {
       const signer = await provider.getSigner();
       const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const tx = await contract.submitScore(wpm, accuracy);
+      
+      // Calculate fee in wei string using base math to avoid complex imports
+      const feeWei = BigInt(Math.floor(parseFloat(submitFee) * 1e18));
+      
+      const tx = await contract.submitScore(wpm, accuracy, { value: feeWei });
       await tx.wait();
       alert("Score submitted successfully to Celo!");
-      fetchBestScore();
+      fetchUserData();
     } catch (error) {
       console.error("Failed to submit score", error);
-      alert("Failed to submit score. See console for details.");
+      alert("Failed to submit score. Ensure you have enough CELO to pay the fee.");
     } finally {
       setIsSubmitting(false);
     }
@@ -238,12 +254,12 @@ export default function TypingGame() {
 
   return (
     <div className="flex flex-col h-full w-full max-w-[1024px] mx-auto">
-      <header className="px-12 py-8 flex justify-between items-center">
-        <div className="flex items-center gap-3 font-bold text-2xl tracking-tight">
+      <header className="px-4 md:px-12 py-4 md:py-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-3 font-bold text-xl md:text-2xl tracking-tight">
           <div className="w-6 h-6 bg-secondary rounded-full border-4 border-primary"></div>
           CELO TYPER
         </div>
-        <div className="flex flex-row items-center gap-4">
+        <div className="flex flex-row items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
           <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-full border border-muted/20">
             <Palette size={14} className="text-muted" />
             <select 
@@ -267,46 +283,61 @@ export default function TypingGame() {
               <span className="text-muted">●</span> {isMiniPay ? "Connect MiniPay" : "Connect Wallet"}
             </button>
           ) : (
-            <div className="bg-surface px-4 py-2 rounded-full flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-              <span className="text-primary">●</span> Connected to {isMiniPay ? "MiniPay" : "Wallet"} • {address?.slice(0, 4)}...{address?.slice(-4)}
+            <div className="bg-surface px-4 py-2 rounded-full flex items-center gap-2 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+              <span className="text-primary">●</span> <span className="hidden sm:inline">Connected •</span> {address?.slice(0, 4)}...{address?.slice(-4)}
             </div>
           )}
         </div>
       </header>
 
-      <main className="flex-1 px-12 flex flex-col justify-center gap-16">
-        <div className="flex gap-12">
+      <main className="flex-1 px-4 md:px-12 flex flex-col justify-center gap-8 md:gap-16">
+        <div className="grid grid-cols-2 sm:flex sm:gap-12 gap-4">
           <div className="flex flex-col">
             <div className="text-[11px] uppercase tracking-[0.1em] text-muted mb-1">WPM</div>
-            <div className={`text-5xl font-extrabold leading-none tracking-tight ${status === 'playing' ? 'text-primary' : ''}`}>
+            <div className={`text-4xl sm:text-5xl font-extrabold leading-none tracking-tight ${status === 'playing' ? 'text-primary' : ''}`}>
               {currentWpm || 0}
             </div>
           </div>
           <div className="flex flex-col">
             <div className="text-[11px] uppercase tracking-[0.1em] text-muted mb-1">ACC</div>
-            <div className="text-5xl font-extrabold leading-none tracking-tight">
+            <div className="text-4xl sm:text-5xl font-extrabold leading-none tracking-tight">
               {currentAcc}%
             </div>
           </div>
           <div className="flex flex-col">
             <div className="text-[11px] uppercase tracking-[0.1em] text-muted mb-1">TIME</div>
-            <div className="text-5xl font-extrabold leading-none tracking-tight">
+            <div className="text-4xl sm:text-5xl font-extrabold leading-none tracking-tight">
               {timeLeft}s
             </div>
           </div>
+          {status === 'finished' && (
+            <div className="flex flex-col animate-in fade-in zoom-in duration-300">
+              <div className="text-[11px] uppercase tracking-[0.1em] text-muted mb-1 flex items-center gap-1"><Trophy size={12} className="text-secondary"/> EARNED</div>
+              <div className="text-4xl sm:text-5xl font-extrabold leading-none tracking-tight text-secondary">
+                +{Math.floor((wpm * accuracy) / 100)} pts
+              </div>
+            </div>
+          )}
         </div>
 
         <div 
-          className="font-mono text-[32px] leading-relaxed text-muted max-w-[900px] select-none relative"
+          className={`font-mono text-xl sm:text-[32px] sm:leading-relaxed text-muted max-w-[900px] select-none relative p-4 sm:p-0 rounded-xl transition-all ${isFocused ? 'ring-2 ring-primary/20 sm:ring-0' : 'cursor-pointer hover:bg-surface sm:hover:bg-transparent'}`}
           onClick={() => inputRef.current?.focus()}
         >
+          {!isFocused && status !== 'finished' && (
+            <div className="absolute inset-0 flex items-center p-4 sm:p-0 sm:justify-start bg-paper/60 backdrop-blur-sm z-10 rounded-xl sm:hidden">
+               <span className="bg-primary text-paper px-4 py-2 rounded-full font-bold text-sm shadow-lg whitespace-nowrap">Tap to start typing</span>
+            </div>
+          )}
           {renderWords()}
           <input
             ref={inputRef}
             type="text"
             value={currentInput}
             onChange={handleInputChange}
-            className="absolute opacity-0 pointer-events-none"
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className="absolute opacity-0 pointer-events-none w-0 h-0"
             autoFocus
             autoComplete="off"
             autoCapitalize="off"
@@ -316,28 +347,33 @@ export default function TypingGame() {
         </div>
       </main>
 
-      <footer className="p-12 flex justify-between items-end">
-        <div className="text-xs text-muted">
-          Press <span className="bg-gray-200 px-1.5 py-0.5 rounded font-mono">Tab</span> + <span className="bg-gray-200 px-1.5 py-0.5 rounded font-mono">Enter</span> to restart test
+      <footer className="p-4 md:p-12 flex flex-col-reverse sm:flex-row justify-between items-center sm:items-end gap-6 mt-auto">
+        <div className="text-xs text-muted w-full sm:w-auto text-center sm:text-left">
+          Press <span className="bg-muted/20 px-1.5 py-0.5 rounded font-mono text-ink">Tab</span> + <span className="bg-muted/20 px-1.5 py-0.5 rounded font-mono text-ink">Enter</span> to restart test
         </div>
-        <div className="flex gap-4">
-          <div className="text-right">
-            <div className="mt-3 text-xs font-medium text-muted">
-              {bestScore !== null ? `Best Score: ${bestScore} WPM` : ""}
+        <div className="flex gap-4 w-full sm:w-auto justify-center sm:justify-end">
+          <div className="text-center sm:text-right w-full sm:w-auto">
+            <div className="mt-3 text-xs font-medium text-muted flex items-center justify-center sm:justify-end gap-3 flex-wrap">
+              {isConnected && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-surface rounded-md font-bold text-ink border border-muted/20">
+                  <Trophy size={12} className="text-secondary" /> {userPoints} Points
+                </span>
+              )}
+              {bestScore !== null && <span>Best Score: {bestScore} WPM</span>}
             </div>
-            <div className="mt-2 flex gap-4">
+            <div className="mt-2 flex gap-4 justify-center sm:justify-end w-full">
               <button 
                 onClick={startGame}
-                className="px-7 py-3.5 rounded-xl font-bold text-sm cursor-pointer border border-ink bg-transparent transition-transform hover:scale-105"
+                className="px-5 md:px-7 py-3 md:py-3.5 rounded-xl font-bold text-sm cursor-pointer border border-ink bg-transparent transition-transform hover:scale-105"
               >
-                Restart Test
+                Restart
               </button>
               <button 
                 onClick={submitScore}
                 disabled={isSubmitting || !isConnected || status !== 'finished'}
-                className="px-7 py-3.5 rounded-xl font-bold text-sm cursor-pointer border border-primary bg-primary text-paper transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 md:px-7 py-3 md:py-3.5 rounded-xl font-bold text-sm cursor-pointer border border-primary bg-primary text-paper transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSubmitting ? "Submitting..." : "Save to Celo"}
+                {isSubmitting ? "Wait..." : `Save to Celo (${submitFee} CELO)`}
               </button>
             </div>
           </div>
